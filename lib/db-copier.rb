@@ -1,6 +1,5 @@
 require 'rubygems'
 require 'sequel'
-require 'json'
 
 module DbCopier
   class Application
