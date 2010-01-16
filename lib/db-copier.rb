@@ -4,6 +4,7 @@ require 'sequel'
 module DbCopier
   class Application
     attr_reader :tables_to_copy
+
     def initialize &block
       @tables_to_copy        = []
       @index_to_copy         = []
@@ -16,8 +17,8 @@ module DbCopier
       begin
         from, to, @rows_per_copy = options[:from], options[:to], (options[:rows_per_copy] || 50)
         raise ArgumentError unless from && to && from.is_a?(Hash) && to.is_a?(Hash) && from.size > 0 && to.size > 0
-        @DB_from , @DB_to = Sequel.connect(from), Sequel.connect(to)
-        @DB_from.test_connection && @DB_to.test_connection
+        @DB_from, @DB_to = Sequel.connect(from), Sequel.connect(to)
+        @DB_from.test_connection && @DB_to.test_connection #test connections
         @tables_to_copy = @DB_from.tables
         @DB_to.tables
         instance_eval { yield } if block_given?
@@ -29,6 +30,19 @@ module DbCopier
       ensure
         self.close_connections
       end
+    end
+
+    def copy_columns
+      #Hash of the form {:table => [:col1, :col2]} -- maintaing record of columns to keep for a table
+      @copy_columns ||= {}
+    end
+
+    def for_table(table, options = {})
+      raise ArgumentError, "missing required copy_cols attribute" unless (copy_columns = options[:copy_columns])
+      table, copy_columns = table.to_sym, copy_columns.map {|col| col.to_sym}
+      raise ArgumentError, "table does not exist" unless @DB_to.table_exists?(table)
+      raise ArgumentError, "columns do not exist" unless (@DB_to.schema(table).map {|cols| cols.first} & copy_columns) == copy_columns
+      self.copy_columns[table] = copy_columns
     end
 
     def index(ind)
@@ -90,6 +104,7 @@ module DbCopier
         end
       end
     end
+
     protected :copy_tables
 
     def close_connections
@@ -97,6 +112,7 @@ module DbCopier
       @DB_from.disconnect if defined?(@DB_from) && @DB_from
       @DB_to.disconnect if defined?(@DB_to) && @DB_to
     end
+
     protected :close_connections
 
   end
@@ -105,6 +121,6 @@ module DbCopier
     Application.new &block
   end
 
-  
+
 end
 

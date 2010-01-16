@@ -3,6 +3,9 @@ require File.dirname(__FILE__) + "/spec_helper.rb"
 describe DbCopier do
   #Proc to truncate tables
   clean_up = lambda {|db_info, table_to_truncate| Sequel.connect(db_info)[table_to_truncate.to_sym].truncate }
+  mock_target_db = {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'db_copier_test'}
+  source_db = {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'dharma_development'}
+  target_db = {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'admin_tools_development'}
 
   it "should throw an argument error if the :from and :to hashes are not provided" do
     begin
@@ -53,9 +56,9 @@ describe DbCopier do
   it "should copy all tables if no #table methods are called in the dsl" do
     app = DbCopier.app do
       copy :from => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'dharma_development'},
-        :to => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'db_copier_test'}, :mock_copy => true
+           :to => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'db_copier_test'}, :mock_copy => true
     end
-    ['clicks','custom_src_query_ratings','invitations','result_sets','review_votes','schema_migrations','search_reviews','shares','source_ratings','station_searches','station_sources','stations','suggested_sources','twitter_oauth_infos','user_custom_src_query_ratings','user_source_query_histories','users','users_followers','votes'].each do |tab|
+    ['clicks', 'custom_src_query_ratings', 'invitations', 'result_sets', 'review_votes', 'schema_migrations', 'search_reviews', 'shares', 'source_ratings', 'station_searches', 'station_sources', 'stations', 'suggested_sources', 'twitter_oauth_infos', 'user_custom_src_query_ratings', 'user_source_query_histories', 'users', 'users_followers', 'votes'].each do |tab|
       app.tables_to_copy.should include(tab.to_sym)
     end
   end
@@ -72,26 +75,81 @@ describe DbCopier do
 
 
   it "should copy only select tables if they are provided as an #only method in the dsl - real test" do
-    target_db = {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'admin_tools_development'}
+    mock_copy = true
     app = DbCopier.app do
       copy :from => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'dharma_development'},
-        :to => target_db,
-        :rows_per_copy => 1000 do
-          only 'custom_src_query_ratings'
-        end
+           :to => target_db, :mock_copy => mock_copy, :rows_per_copy => 1000 do
+        only 'custom_src_query_ratings'
+      end
     end
     app.tables_to_copy.map {|tab| tab.to_s}.sort.should == ['custom_src_query_ratings']
-    clean_up.call(target_db,'custom_src_query_ratings')
+    clean_up.call(target_db, 'custom_src_query_ratings') unless mock_copy
   end
 
   it "should not copy tables specified in the #except dsl method" do
     app = DbCopier.app do
-      copy :from => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'dharma_development'}, :to => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'db_copier_test'}, :mock_copy => true do
+      copy :from => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'dharma_development'},
+           :to => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'db_copier_test'},
+           :mock_copy => true do
         except 'custom_src_query_ratings', 'result_sets', 'review_votes'
       end
     end
-    app.tables_to_copy.map {|tab| tab.to_s}.sort.should == ['clicks','invitations','schema_migrations','search_reviews','shares','source_ratings','station_searches','station_sources','stations','suggested_sources','twitter_oauth_infos','user_custom_src_query_ratings','user_source_query_histories','users','users_followers','votes']
+    app.tables_to_copy.map {|tab| tab.to_s}.sort.should == ['clicks', 'invitations', 'schema_migrations', 'search_reviews', 'shares', 'source_ratings', 'station_searches', 'station_sources', 'stations', 'suggested_sources', 'twitter_oauth_infos', 'user_custom_src_query_ratings', 'user_source_query_histories', 'users', 'users_followers', 'votes']
   end
+
+  it "should create the target db if it does not exist"
+  it "should create tables in the target db if they do not exist"
+
+  it "should only copy certain select columns if they are specified" do
+    app = DbCopier.app do
+      copy :from => source_db, :to => target_db, :mock_copy => true do
+        except 'custom_src_query_ratings', 'result_sets', 'review_votes'
+        for_table :custom_src_query_ratings, :copy_columns => ['id', 'source_id']
+      end
+    end
+    app.copy_columns[:custom_src_query_ratings].should == [:id, :source_id]
+  end
+
+  it "should throw an ArgumentError if the table or columns specified in the copy do not exist" do
+    begin
+      app = DbCopier.app do
+        copy :from => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'dharma_development'},
+             :to => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'db_copier_test'}, :mock_copy => true do
+          except 'custom_src_query_ratings', 'result_sets', 'review_votes'
+          for_table :custom_src_query_ratings, :copy_columns => ['id', 'foo']
+        end
+      end
+      raise RuntimeError, "Shouldn't be here"
+    rescue ArgumentError
+    end
+
+    begin
+      app = DbCopier.app do
+        copy :from => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'dharma_development'},
+             :to => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'db_copier_test'}, :mock_copy => true do
+          except 'custom_src_query_ratings', 'result_sets', 'review_votes'
+          for_table :custom_src_query, :copy_columns => ['id', 'foo']
+        end
+      end
+      raise RuntimeError, "Shouldn't be here"
+    rescue ArgumentError
+    end
+  end
+
+  it "should throw an ArgumentError if the for_table method is called without appropriate args" do
+    begin
+      app = DbCopier.app do
+        copy :from => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'dharma_development'}, :to => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'db_copier_test'}, :mock_copy => true do
+          except 'custom_src_query_ratings', 'result_sets', 'review_votes'
+          for_table :custom_src_query_ratings
+        end
+      end
+      raise RuntimeError, "Shouldn't be here"
+    rescue ArgumentError
+    end
+  end
+
+  it "should handle blobs"
 
 
 
