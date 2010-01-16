@@ -18,6 +18,7 @@ module DbCopier
         from, to, @rows_per_copy = options[:from], options[:to], (options[:rows_per_copy] || 50)
         raise ArgumentError unless from && to && from.is_a?(Hash) && to.is_a?(Hash) && from.size > 0 && to.size > 0
         @DB_from , @DB_to = Sequel.connect(from), Sequel.connect(to)
+        @DB_from.test_connection && @DB_to.test_connection
         @tables_to_copy = @DB_from.tables
         @DB_to.tables
         instance_eval { yield } if block_given?
