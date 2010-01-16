@@ -1,0 +1,7 @@
+*.log
+service_log
+.DS_Store
+tmp
+*.swp
+.idea
+
