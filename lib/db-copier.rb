@@ -62,9 +62,9 @@ module DbCopier
         tab_to_copy = tab.to_sym
         puts "tab is #{tab_to_copy}"
         num_rows = @DB_from[tab_to_copy].count
+        $stderr.puts "num_rows is: #{num_rows}"
         #num_rows = 1000
-        i = 1
-        table_schema = @DB_from.schema(tab_to_copy)
+        i = 0
         #Create the table if it does not already exist
         #unless @DB_to.table_exists?
         #  cols_string =
@@ -76,18 +76,14 @@ module DbCopier
         #
         #  end
         #end
-        date_time_columns = []
-        table_schema.each do |column_schema|
-          if column_schema[1][:type] == :datetime
-            date_time_columns << column_schema.first
-          end
-        end
-        while i < num_rows
-          rows_to_copy = @DB_from[tab_to_copy].limit(@rows_per_copy, i).all
-          #Special handling of datetime columns
-          rows_to_copy.each { |row| date_time_columns.each {|dt_col| row[dt_col] = DateTime.parse(row[dt_col].inspect)} }
 
-          puts "copying rows: #{i}-#{i+(rows_to_copy.count)} for table: #{tab_to_copy}"
+        #This is the intersection of columns specified via the +copy_columns+ argumnent in the +for_table+ method
+        #and those that actually exist in the target table.
+        columns_to_copy = (copy_columns[tab_to_copy] || []) | (@DB_to.schema(tab_to_copy).map {|cols| cols.first})
+        while i < num_rows
+          rows_to_copy = @DB_from[tab_to_copy].select(*columns_to_copy).limit(@rows_per_copy, i).all
+          #Special handling of datetime columns
+          rows_to_copy.each { |col_name, col_val| rows_to_copy[col_name] = DateTime.parse(col_val) if col_val.class == Time }
           i += rows_to_copy.count
           @DB_to[tab_to_copy].multi_insert(rows_to_copy)
         end

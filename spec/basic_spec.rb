@@ -149,6 +149,25 @@ describe DbCopier do
     end
   end
 
+  it "should copy only columns that are there in the target db" do
+    begin
+      db_target = Sequel.connect mock_db
+      db_target.create_table :users do
+        primary_key :id
+        String :name
+      end
+      app = DbCopier.app do
+        copy :from => source_db, :to => mock_db do
+          only 'users'
+        end
+      end
+      db_src = Sequel.connect source_db
+      db_src[:users].count.should == db_target[:users].count
+    ensure
+      db_target.drop_table(:users) if db_target && db_target.table_exists?(:users)
+    end
+  end
+
   it "should handle blobs"
   it "should create tables in the target db if they do not exist"
 
