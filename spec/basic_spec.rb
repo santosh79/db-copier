@@ -150,7 +150,6 @@ describe DbCopier do
   end
 
   it "should handle blobs"
-  it "should create the target db if it does not exist"
   it "should create tables in the target db if they do not exist"
 
 
