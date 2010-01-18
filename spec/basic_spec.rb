@@ -6,33 +6,15 @@ describe DbCopier do
   fake_cred_db = target_db.merge(:user => 'rootsss')
 
   def get_tenor(val)
-    if val * 10 <= 3
-      "Luciano Pavarotti"
-    elsif val * 10 <=6
-      "Placido Domingo"
-    else
-      "Jose Carreras"
-    end
+    (val * 10 <= 3) ? "Luciano Pavarotti" : (val * 10 <= 6) ? "Placido Domingo" : "Jose Carreras"
   end
 
   def get_amigo(val)
-    if val * 10 <= 3
-      "Chevy Chase"
-    elsif val * 10 <=6
-      "Steve Martin"
-    else
-      "Martin Short"
-    end
+    (val * 10 <= 3) ? "Chevy Chase" : (val * 10 <= 6) ? "Steve Martin" : "Martin Short"
   end
 
-  def get_three_tragic_shakesperean_characters(val)
-    if val * 10 <= 3
-      "King Lear"
-    elsif val * 10 <=6
-      "Titus Andronicus"
-    else
-      "Hamlet"
-    end
+  def get_three_tragic_shakespearean_characters(val)
+    (val * 10 <= 3) ? "King Lear" : (val * 10 <= 6) ? "Titus Andronicus" : "Hamlet"
   end
 
   before(:all) do
@@ -46,7 +28,7 @@ describe DbCopier do
     end
 
     a_thousand_tenors = []
-    1000.times { |i| a_thousand_tenors << {:id => (i+1), :nombre => get_tenor(rand), :created_at => DateTime.now}}
+    1000.times { |i| a_thousand_tenors << {:id => (i+1), :nombre => get_tenor(rand), :created_at => DateTime.now} }
     @source_db_conn[:uno].multi_insert(a_thousand_tenors)
 
     @source_db_conn.create_table :dos do
@@ -56,7 +38,7 @@ describe DbCopier do
     end
 
     a_thousand_amigos = []
-    1000.times { |i| a_thousand_amigos<< {:id => (i+1), :nombre => get_amigo(rand), :created_at => DateTime.now}}
+    1000.times { |i| a_thousand_amigos<< {:id => (i+1), :nombre => get_amigo(rand), :created_at => DateTime.now} }
     @source_db_conn[:dos].multi_insert(a_thousand_amigos)
 
     @source_db_conn.create_table :tres do
@@ -65,7 +47,7 @@ describe DbCopier do
       DateTime :created_at, :null => false, :default => DateTime.now
     end
     a_thousand_tragics = []
-    1000.times { |i| a_thousand_amigos<< {:id => (i+1), :nombre => get_three_tragic_shakesperean_characters(rand), :created_at => DateTime.now}}
+    1000.times { |i| a_thousand_amigos<< {:id => (i+1), :nombre => get_three_tragic_shakespearean_characters(rand), :created_at => DateTime.now} }
     @source_db_conn[:dos].multi_insert(a_thousand_tragics)
   end
 
@@ -80,7 +62,6 @@ describe DbCopier do
     @source_db_conn.drop_table :dos
     @source_db_conn.drop_table :tres
   end
-
 
   def create_target_tables
     @target_db_conn.create_table :uno do
@@ -159,8 +140,7 @@ describe DbCopier do
   it "should copy all tables if no #table methods are called in the dsl" do
     create_target_tables
     app = DbCopier.app do
-      copy :from => source_db,
-           :to => target_db
+      copy :from => source_db, :to => target_db
     end
     @source_db_conn.tables.map{|tbl| tbl.inspect}.sort.should == @target_db_conn.tables.map{|tbl| tbl.inspect}.sort
   end
@@ -179,8 +159,7 @@ describe DbCopier do
   it "should not copy tables specified in the #except dsl method" do
     create_target_tables
     app = DbCopier.app do
-      copy :from => source_db,
-           :to => target_db do
+      copy :from => source_db, :to => target_db do
         except 'tres'
       end
     end
@@ -218,8 +197,7 @@ describe DbCopier do
     create_target_tables
     begin
       app = DbCopier.app do
-        copy :from => source_db,
-             :to => target_db do
+        copy :from => source_db, :to => target_db do
           except 'tres'
           for_table :uno, :copy_columns => ['id', 'foo']
         end
@@ -288,8 +266,5 @@ describe DbCopier do
 
   it "should handle blobs"
   it "should figure out how disconnect really works"
-  it "should copy views"
-
-
 
 end

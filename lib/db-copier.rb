@@ -1,5 +1,6 @@
 require 'rubygems'
 require 'sequel'
+require 'worker'
 
 module DbCopier
   class Application
@@ -57,34 +58,9 @@ module DbCopier
     def copy_tables
       @tables_to_copy.each do |tab|
         tab_to_copy = tab.to_sym
-        num_rows = @DB_from[tab_to_copy].count
-        i = 0
-        #Create the table if it does not already exist
-        unless @DB_to.table_exists?(tab_to_copy)
-          table_creation_ddl = DbCopier.generate_create_table_ddl(@DB_from, tab_to_copy, tab_to_copy, (self.copy_columns[tab_to_copy] || []))
-          table_creation_ddl = ("@DB_to" + table_creation_ddl)
-          eval table_creation_ddl
-        end
-
-        #This is the intersection of columns specified via the +copy_columns+ argumnent in the +for_table+ method
-        #and those that actually exist in the target table.
-        columns_in_target_db = @DB_to.schema(tab_to_copy).map {|cols| cols.first}
-        columns_to_copy = columns_in_target_db & (copy_columns[tab_to_copy] || columns_in_target_db)
-        #puts "copy_columns[tab_to_copy]: #{copy_columns[tab_to_copy]}\t@DB_to.schema(tab_to_copy)#{@DB_to.schema(tab_to_copy).map {|cols| cols.first}.inspect}\tcolumns_to_copy: #{columns_to_copy.inspect}"
-        while i < num_rows
-          rows_to_copy = @DB_from[tab_to_copy].select(*columns_to_copy).limit(@rows_per_copy, i).all
-          #Special handling of datetime columns
-          rows_to_copy.each { |col_name, col_val| rows_to_copy[col_name] = DateTime.parse(col_val) if col_val.class == Time }
-          i += rows_to_copy.count
-          @DB_to[tab_to_copy].multi_insert(rows_to_copy)
-        end
-
-        #copy indexes now
-        @DB_from.indexes(tab_to_copy).each do |index_name, index_info|
-          #Make sure we are adding an index to a column that is going to be there
-          next unless (columns_to_copy & index_info[:columns] == index_info[:columns])
-          @DB_to.add_index(tab_to_copy, index_info[:columns])
-        end
+        w = Worker.new :src_db_conn => @DB_from, :target_db_conn => @DB_to,
+              :table_name => tab_to_copy, :copy_columns => self.copy_columns[tab_to_copy]
+        w.copy_table
       end
     end
 
