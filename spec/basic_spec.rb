@@ -43,16 +43,22 @@ describe DbCopier do
       primary_key :id, :integer, :null => false
       String :nombre, :null => true
       DateTime :created_at, :null => false, :default => DateTime.now
+      index :nombre
     end
+
     a_thousand_tenors = []
     1000.times { |i| a_thousand_tenors << {:id => (i+1), :nombre => get_tenor(rand), :created_at => DateTime.now}}
+    start = Time.now
     @source_db_conn[:uno].multi_insert(a_thousand_tenors)
+    puts "Time to insert: #{Time.now - start}"
 
     @source_db_conn.create_table :dos do
       primary_key :id, :integer, :null => false
       String :nombre, :null => true
       DateTime :created_at, :null => false, :default => DateTime.now
+      index :nombre
     end
+
     a_thousand_amigos = []
     1000.times { |i| a_thousand_amigos<< {:id => (i+1), :nombre => get_amigo(rand), :created_at => DateTime.now}}
     @source_db_conn[:dos].multi_insert(a_thousand_amigos)
@@ -61,6 +67,7 @@ describe DbCopier do
       primary_key :id, :integer, :null => false
       String :nombre, :null => true
       DateTime :created_at, :null => false, :default => DateTime.now
+      index :nombre
     end
     a_thousand_tragics = []
     1000.times { |i| a_thousand_amigos<< {:id => (i+1), :nombre => get_three_tragic_shakesperean_characters(rand), :created_at => DateTime.now}}
@@ -251,11 +258,13 @@ describe DbCopier do
     end
   end
 
+  it "should copy indexes" do
+  end
+
   it "should handle blobs"
-  it "should work without the mock_copy attribute and without the table_to_copy attribute too"
   it "should figure out how disconnect really works"
   it "should copy views"
-  it "should copy indexes"
+
 
 
 end
