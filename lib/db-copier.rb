@@ -18,14 +18,10 @@ module DbCopier
       begin
         from, to, @rows_per_copy = options[:from], options[:to], (options[:rows_per_copy] || 50)
         raise ArgumentError unless from && to && from.is_a?(Hash) && to.is_a?(Hash) && from.size > 0 && to.size > 0
-        @DB_from, @DB_to = Sequel.connect(from), Sequel.connect(to)
+        @DB_from, @DB_to = Sequel.connect(from.merge(:max_connections => 5, :single_threaded => false)),
+                Sequel.connect(to.merge(:max_connections => 5, :single_threaded => false))
+        #@DB_from, @DB_to = Sequel.connect(from.merge(:single_threaded => true)), Sequel.connect(to.merge(:single_threaded => true))
         @DB_from.test_connection && @DB_to.test_connection #test connections
-        #Create three connections
-        @db_src_conns = []
-        5.times { @db_src_conns << Sequel.connect(from) }
-        @db_target_conns = []
-        5.times { @db_target_conns << Sequel.connect(to) }
-
         @tables_to_copy = @DB_from.tables
         @DB_to.tables
         instance_eval { yield } if block_given?
@@ -64,25 +60,26 @@ module DbCopier
 
     def copy_tables
       threads = []
+      multi_threaded = !(@DB_from.single_threaded? || @DB_to.single_threaded?)
       @tables_to_copy.each do |tab|
         db_src_conn, db_target_con, obj_to_notify, table_to_copy, copy_columns_for_table =
-                @DB_from, @DB_to, self, tab, self.copy_columns[tab.to_sym]
-                #@db_src_conns.pop, @db_target_conns.pop, self, tab, self.copy_columns[tab.to_sym]
-        t = Thread.new(table_to_copy, db_src_conn, db_target_con, obj_to_notify, copy_columns_for_table) do
-          $stderr.puts "starting Thread: #{Thread.current.object_id}"
-          tab_to_copy = table_to_copy.to_sym
+                @DB_from, @DB_to, self, tab.to_sym, self.copy_columns[tab.to_sym]
+        if multi_threaded
+          t = Thread.new(table_to_copy, db_src_conn, db_target_con, obj_to_notify, copy_columns_for_table) do
+            $stderr.puts "starting Thread: #{Thread.current.object_id}"
+            w = Worker.new :src_db_conn => db_src_conn, :target_db_conn => db_target_con,
+                           :table_name => table_to_copy, :copy_columns => copy_columns_for_table, :notify => obj_to_notify
+            w.copy_table
+          end
+          threads << t
+        else
+          $stderr.puts "running in single threaded mode"
           w = Worker.new :src_db_conn => db_src_conn, :target_db_conn => db_target_con,
-                         :table_name => tab_to_copy, :copy_columns => copy_columns_for_table, :notify => obj_to_notify
+                         :table_name => table_to_copy, :copy_columns => copy_columns_for_table, :notify => obj_to_notify
           w.copy_table
         end
-        threads << t
-        #$stderr.puts "starting Thread: #{Thread.current.object_id}"
-        #tab_to_copy = table_to_copy.to_sym
-        #w = Worker.new :src_db_conn => db_src_conn, :target_db_conn => db_target_con,
-        #               :table_name => tab_to_copy, :copy_columns => copy_columns_for_table, :notify => obj_to_notify
-        #w.copy_table
       end
-      threads.each {|t| t.join}
+      threads.each {|t| t.join} if multi_threaded
     end
 
     protected :copy_tables

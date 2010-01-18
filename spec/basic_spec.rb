@@ -28,7 +28,7 @@ describe DbCopier do
     end
 
     a_thousand_tenors = []
-    10_000.times { |i| a_thousand_tenors << {:id => (i+1), :nombre => get_tenor(rand), :created_at => DateTime.now} }
+    1000.times { |i| a_thousand_tenors << {:id => (i+1), :nombre => get_tenor(rand), :created_at => DateTime.now} }
     @source_db_conn[:uno].multi_insert(a_thousand_tenors)
 
     @source_db_conn.create_table :dos do

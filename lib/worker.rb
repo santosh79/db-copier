@@ -29,7 +29,7 @@ module DbCopier
                 columns_in_target_db
               end
 
-      #puts "copy_columns[tab_to_copy]: #{@copy_columns.inspect}\tcolumns_in_target_db#{columns_in_target_db.inspect}\tcolumns_to_copy: #{columns_to_copy.inspect}"
+      #$stderr.puts "copy_columns[tab_to_copy]: #{@copy_columns.inspect}\tcolumns_in_target_db#{columns_in_target_db.inspect}\tcolumns_to_copy: #{columns_to_copy.inspect}"
       while i < num_rows
         rows_to_copy = @src_db_conn[tab_to_copy].select(*columns_to_copy).limit(@rows_per_copy, i).all
         #Special handling of datetime columns
