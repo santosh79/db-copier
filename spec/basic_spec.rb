@@ -43,20 +43,16 @@ describe DbCopier do
       primary_key :id, :integer, :null => false
       String :nombre, :null => true
       DateTime :created_at, :null => false, :default => DateTime.now
-      index :nombre
     end
 
     a_thousand_tenors = []
     1000.times { |i| a_thousand_tenors << {:id => (i+1), :nombre => get_tenor(rand), :created_at => DateTime.now}}
-    start = Time.now
     @source_db_conn[:uno].multi_insert(a_thousand_tenors)
-    puts "Time to insert: #{Time.now - start}"
 
     @source_db_conn.create_table :dos do
       primary_key :id, :integer, :null => false
       String :nombre, :null => true
       DateTime :created_at, :null => false, :default => DateTime.now
-      index :nombre
     end
 
     a_thousand_amigos = []
@@ -67,7 +63,6 @@ describe DbCopier do
       primary_key :id, :integer, :null => false
       String :nombre, :null => true
       DateTime :created_at, :null => false, :default => DateTime.now
-      index :nombre
     end
     a_thousand_tragics = []
     1000.times { |i| a_thousand_amigos<< {:id => (i+1), :nombre => get_three_tragic_shakesperean_characters(rand), :created_at => DateTime.now}}
@@ -164,21 +159,21 @@ describe DbCopier do
   it "should copy all tables if no #table methods are called in the dsl" do
     create_target_tables
     app = DbCopier.app do
-        copy :from => source_db,
-             :to => target_db
-      end
-      @source_db_conn.tables.map{|tbl| tbl.inspect}.sort.should == @target_db_conn.tables.map{|tbl| tbl.inspect}.sort
+      copy :from => source_db,
+           :to => target_db
+    end
+    @source_db_conn.tables.map{|tbl| tbl.inspect}.sort.should == @target_db_conn.tables.map{|tbl| tbl.inspect}.sort
   end
 
   it "should copy only select tables if they are provided as an #only method in the dsl" do
     create_target_tables
     only_tables_to_copy = ['uno', 'dos'].sort
     app = DbCopier.app do
-        copy :from => source_db, :to => target_db do
-          only *only_tables_to_copy
-        end
+      copy :from => source_db, :to => target_db do
+        only *only_tables_to_copy
       end
-      only_tables_to_copy.each { |tbl| @source_db_conn[tbl.to_sym].count.should == @target_db_conn[tbl.to_sym].count }
+    end
+    only_tables_to_copy.each { |tbl| @source_db_conn[tbl.to_sym].count.should == @target_db_conn[tbl.to_sym].count }
   end
 
   it "should not copy tables specified in the #except dsl method" do
@@ -237,28 +232,58 @@ describe DbCopier do
   it "should copy only columns that are there in the target db" do
     create_target_with_one_less_column
     app = DbCopier.app do
-        copy :from => source_db, :to => target_db do
-          only 'uno'
-        end
+      copy :from => source_db, :to => target_db do
+        only 'uno'
+      end
     end
     @source_db_conn[:uno].count.should == @target_db_conn[:uno].count
   end
 
   it "should create tables in the target db if they do not exist" do
-    begin
-      app = DbCopier.app do
-        copy :from => source_db, :to => target_db do
-          for_table :uno, :copy_columns => ['id', 'created_at']
-        end
+    app = DbCopier.app do
+      copy :from => source_db, :to => target_db do
+        for_table :uno, :copy_columns => ['id', 'created_at']
       end
-      @target_db_conn.tables.map{|tbl| tbl.to_s}.sort.should == @source_db_conn.tables.map{|tbl| tbl.to_s}.sort
-      @source_db_conn.tables.each do |tbl|
-        @source_db_conn[tbl].count.should == @target_db_conn[tbl].count
-      end
+    end
+    @target_db_conn.tables.map{|tbl| tbl.to_s}.sort.should == @source_db_conn.tables.map{|tbl| tbl.to_s}.sort
+    @source_db_conn.tables.each do |tbl|
+      @source_db_conn[tbl].count.should == @target_db_conn[tbl].count
     end
   end
 
   it "should copy indexes" do
+    #Create an index
+    @source_db_conn.add_index :uno, :nombre
+    app = DbCopier.app do
+      copy :from => source_db, :to => target_db do
+        only 'uno'
+      end
+    end
+
+    @target_db_conn.indexes(:uno).count.should > 0
+    @target_db_conn.indexes(:uno).each { |key, val| val[:columns].should include(:nombre) }
+    @source_db_conn.drop_index :uno, :nombre #clean-up
+
+    @source_db_conn.add_index :dos, [:nombre, :created_at]
+    app = DbCopier.app do
+      copy :from => source_db, :to => target_db do
+        only 'dos'
+      end
+    end
+    @target_db_conn.indexes(:dos).count.should > 0
+    @target_db_conn.indexes(:dos).each { |key, val| val[:columns].should == [:nombre,:created_at] }
+  end
+
+  it "should not copy indexes of columns that are not to be copied" do
+    #Create an index
+    @source_db_conn.add_index :uno, :nombre
+    app = DbCopier.app do
+      copy :from => source_db, :to => target_db do
+        only 'uno'
+        for_table :uno, :copy_columns => [:id,:created_at]
+      end
+    end
+    @target_db_conn.indexes(:uno).count.should == 0
   end
 
   it "should handle blobs"

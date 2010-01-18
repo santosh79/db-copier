@@ -78,6 +78,13 @@ module DbCopier
           i += rows_to_copy.count
           @DB_to[tab_to_copy].multi_insert(rows_to_copy)
         end
+
+        #copy indexes now
+        @DB_from.indexes(tab_to_copy).each do |index_name, index_info|
+          #Make sure we are adding an index to a column that is going to be there
+          next unless (columns_to_copy & index_info[:columns] == index_info[:columns])
+          @DB_to.add_index(tab_to_copy, index_info[:columns])
+        end
       end
     end
 
