@@ -28,7 +28,7 @@ describe DbCopier do
     end
 
     a_thousand_tenors = []
-    1000.times { |i| a_thousand_tenors << {:id => (i+1), :nombre => get_tenor(rand), :created_at => DateTime.now} }
+    10_000.times { |i| a_thousand_tenors << {:id => (i+1), :nombre => get_tenor(rand), :created_at => DateTime.now} }
     @source_db_conn[:uno].multi_insert(a_thousand_tenors)
 
     @source_db_conn.create_table :dos do
@@ -48,19 +48,33 @@ describe DbCopier do
     end
     a_thousand_tragics = []
     1000.times { |i| a_thousand_amigos<< {:id => (i+1), :nombre => get_three_tragic_shakespearean_characters(rand), :created_at => DateTime.now} }
-    @source_db_conn[:dos].multi_insert(a_thousand_tragics)
+    @source_db_conn[:tres].multi_insert(a_thousand_tragics)
+
+    @source_db_conn.create_table :quatro do
+      primary_key :id, :integer, :null => false
+      String :nombre, :null => true
+      DateTime :created_at, :null => false, :default => DateTime.now
+    end
+    a_thousand_tragics = []
+    1000.times { |i| a_thousand_amigos<< {:id => (i+1), :nombre => get_three_tragic_shakespearean_characters(rand), :created_at => DateTime.now} }
+    @source_db_conn[:quatro].multi_insert(a_thousand_tragics)
+
+    @source_db_conn.create_table :quinto do
+      primary_key :id, :integer, :null => false
+      String :nombre, :null => true
+      DateTime :created_at, :null => false, :default => DateTime.now
+    end
+    a_thousand_tragics = []
+    1000.times { |i| a_thousand_amigos<< {:id => (i+1), :nombre => get_three_tragic_shakespearean_characters(rand), :created_at => DateTime.now} }
+    @source_db_conn[:quinto].multi_insert(a_thousand_tragics)
   end
 
   after(:each) do
-    @target_db_conn.tables.each do |tbl|
-      @target_db_conn.drop_table(tbl)
-    end
+    @target_db_conn.tables.each { |tbl| @target_db_conn.drop_table(tbl) } #clear the target tables
   end
 
   after(:all) do
-    @source_db_conn.drop_table :uno
-    @source_db_conn.drop_table :dos
-    @source_db_conn.drop_table :tres
+    @source_db_conn.tables.each { |tab| @source_db_conn.drop_table tab } #clear the source tables
   end
 
   def create_target_tables
@@ -158,12 +172,13 @@ describe DbCopier do
 
   it "should not copy tables specified in the #except dsl method" do
     create_target_tables
+    original_tres_count = @target_db_conn[:tres].count
     app = DbCopier.app do
       copy :from => source_db, :to => target_db do
         except 'tres'
       end
     end
-    app.tables_to_copy.map {|tab| tab.to_s}.sort.should == ['dos', 'uno']
+    @target_db_conn[:tres].count.should == original_tres_count
   end
 
   it "should throw an ArgumentError if the for_table method is called without appropriate args" do
@@ -218,6 +233,20 @@ describe DbCopier do
   end
 
   it "should create tables in the target db if they do not exist" do
+    start = Time.now
+    app = DbCopier.app do
+      copy :from => source_db, :to => target_db do
+      end
+    end
+    $stderr.puts "Total time for copy: #{Time.now - start}"
+    @target_db_conn.tables.map{|tbl| tbl.to_s}.sort.should == @source_db_conn.tables.map{|tbl| tbl.to_s}.sort
+    @source_db_conn.tables.each do |tbl|
+      #$stderr.puts "examining table #{tbl}\tsource-count: #{@source_db_conn[tbl].count}\ttarget count: #{@target_db_conn[tbl].count}"
+      @source_db_conn[tbl].count.should == @target_db_conn[tbl].count
+    end
+  end
+
+  it "should create tables in the target db if they do not exist and it should support a +for_table+ argument" do
     app = DbCopier.app do
       copy :from => source_db, :to => target_db do
         for_table :uno, :copy_columns => ['id', 'created_at']
@@ -264,6 +293,8 @@ describe DbCopier do
     @target_db_conn.indexes(:uno).count.should == 0
   end
 
+  it "should contain useful log msgs"
+  it "should work in a threaded environment"
   it "should handle blobs"
   it "should figure out how disconnect really works"
 

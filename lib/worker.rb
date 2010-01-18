@@ -1,13 +1,14 @@
 module DbCopier
   class Worker
     def initialize(options = {})
-      @src_db_conn, @target_db_conn, @table_name, @rows_per_copy, @copy_columns = options[:src_db_conn], options[:target_db_conn],
-              options[:table_name], (options[:rows_per_copy] || 1000), (options[:copy_columns] || [])
-      raise ArgumentError unless @src_db_conn && @target_db_conn && @table_name
+      @src_db_conn, @target_db_conn, @table_name, @rows_per_copy, @copy_columns, @notify = options[:src_db_conn], options[:target_db_conn],
+              options[:table_name], (options[:rows_per_copy] || 1000), (options[:copy_columns] || []), options[:notify]
+      raise ArgumentError unless @src_db_conn && @target_db_conn && @table_name && @notify
       @copy_columns ||= []
     end
 
     def copy_table
+      $stderr.puts "copying table: #{@table_name} from thread: #{Thread.current.object_id}"
       tab_to_copy = @table_name.to_sym
       num_rows = @src_db_conn[tab_to_copy].count
       i = 0
@@ -43,6 +44,11 @@ module DbCopier
         next unless (columns_to_copy & index_info[:columns] == index_info[:columns])
         @target_db_conn.add_index(tab_to_copy, index_info[:columns])
       end
+      notify_caller
+    end
+
+    def notify_caller
+      @notify.copy_complete(Thread.current)
     end
   end
 end
