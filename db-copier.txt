@@ -10,7 +10,9 @@ require 'db-copier'
 source_db => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'db_copier_test_src'}
 target_db => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'db_copier_test_target'}
 
-copy :from => source_db, :to => target_db
+DbCopier.app do
+  copy :from => source_db, :to => target_db
+end
 --------------------------------------------------------------------------------------------------------------------------------
 
 This would create tables and indexes in the target_db for you (if they do not exist) and copy over contents from the source.
