@@ -131,21 +131,7 @@ describe DbCopier do
     app.copy_columns[:custom_src_query_ratings].should == [:id, :source_id]
   end
 
-  it "should throw an ArgumentError if the table specified in the for_table method does not exist" do
-    begin
-      app = DbCopier.app do
-        copy :from => source_db,
-             :to => mock_db, :mock_copy => true do
-          except 'custom_src_query_ratings', 'result_sets', 'review_votes'
-          for_table :custom_src_query, :copy_columns => ['id', 'foo']
-        end
-      end
-      raise RuntimeError, "Shouldn't be here"
-    rescue ArgumentError
-    end
-  end
-
-  it "should throw an ArgumentError if the columns specified in the for_table method does not exist" do
+  it "should throw an ArgumentError if the columns specified in the for_table method does not exist do not exist in the source table" do
     begin
       app = DbCopier.app do
         copy :from => source_db,
@@ -181,7 +167,7 @@ describe DbCopier do
       app = DbCopier.app do
         copy :from => source_db, :to => mock_db do
           only 'users'
-          #for_table :users, :copy_columns => ['id', 'email']
+          for_table :users, :copy_columns => ['id', 'email']
         end
     end
     @mock_db_conn.tables.should include(:users)

@@ -40,8 +40,7 @@ module DbCopier
     def for_table(table, options = {})
       raise ArgumentError, "missing required copy_cols attribute" unless (copy_columns = options[:copy_columns])
       table, copy_columns = table.to_sym, copy_columns.map {|col| col.to_sym}
-      raise ArgumentError, "table does not exist" unless @DB_to.table_exists?(table)
-      raise ArgumentError, "columns do not exist" unless (@DB_to.schema(table).map {|cols| cols.first} & copy_columns) == copy_columns
+      raise ArgumentError, "columns do not exist" unless (@DB_from.schema(table).map {|cols| cols.first} & copy_columns) == copy_columns
       self.copy_columns[table] = copy_columns
     end
 
