@@ -67,7 +67,7 @@ Example: Copy only the name and id fields of the users table
 
 Finally, if you have already created the schema of the target_db db-copier only tries to copy columns that are present in the target_db's schema.
 
-h2. LICENSE
+LICENSE
 
 (The MIT License)
 
