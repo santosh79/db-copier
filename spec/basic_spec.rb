@@ -2,7 +2,7 @@ require File.dirname(__FILE__) + "/spec_helper.rb"
 
 describe DbCopier do
   source_db = {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'db_copier_test_src'}
-  target_db = {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'db_copier_test_target'}
+  target_db = source_db.merge(:database => 'db_copier_test_target')
   fake_cred_db = target_db.merge(:user => 'rootsss')
 
   def get_tenor(val)

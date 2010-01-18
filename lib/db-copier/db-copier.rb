@@ -14,10 +14,10 @@ module DbCopier
 
     def copy options = {}
       begin
-        from, to, @rows_per_copy = options[:from], options[:to], (options[:rows_per_copy] || 50)
+        from, to, @rows_per_copy, max_connections = options[:from], options[:to], (options[:rows_per_copy] || 50), (options[:max_connections] || 5)
         raise ArgumentError unless from && to && from.is_a?(Hash) && to.is_a?(Hash) && from.size > 0 && to.size > 0
-        @source_db, @target_db = Sequel.connect(from.merge(:max_connections => 5, :single_threaded => false)),
-                Sequel.connect(to.merge(:max_connections => 5, :single_threaded => false))
+        @source_db, @target_db = Sequel.connect(from.merge(:max_connections => max_connections, :single_threaded => false)),
+                Sequel.connect(to.merge(:max_connections => max_connections, :single_threaded => false))
         @source_db.test_connection && @target_db.test_connection #test connections
         @tables_to_copy = @source_db.tables
         @target_db.tables
