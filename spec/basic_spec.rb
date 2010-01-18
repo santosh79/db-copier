@@ -10,7 +10,7 @@ describe DbCopier do
 
   before(:all) do
     #create some connections
-    @source_db_conn, @fake_cred_db_conn, @mock_db_conn, @target_db_conn = Sequel.connect(source_db), Sequel.connect(fake_cred_db), 
+    @source_db_conn, @fake_cred_db_conn, @mock_db_conn, @target_db_conn = Sequel.connect(source_db), Sequel.connect(fake_cred_db),
             Sequel.connect(mock_db), Sequel.connect(target_db)
   end
 
@@ -176,8 +176,24 @@ describe DbCopier do
     end
   end
 
+  it "should create tables in the target db if they do not exist" do
+    begin
+      app = DbCopier.app do
+        copy :from => source_db, :to => mock_db do
+          only 'users'
+          #for_table :users, :copy_columns => ['id', 'email']
+        end
+    end
+    @mock_db_conn.tables.should include(:users)
+    @mock_db_conn[:users].count.should == @source_db_conn[:users].count
+    ensure
+      @mock_db_conn.drop_table :users if @mock_db_conn.table_exists?(:users)
+    end
+  end
+
   it "should handle blobs"
-  it "should create tables in the target db if they do not exist"
+  it "should work without the mock_copy attribute and without the table_to_copy attribute too"
+  it "should figure out how disconnect really works"
 
 
 end

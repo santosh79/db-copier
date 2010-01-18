@@ -66,16 +66,12 @@ module DbCopier
         #num_rows = 1000
         i = 0
         #Create the table if it does not already exist
-        #unless @DB_to.table_exists?
-        #  cols_string =
-        #  table_creation_string = %{
-        #
-        #
-        #  }
-        #  @DB_to.create_table tab_to_copy do
-        #
-        #  end
-        #end
+        unless @DB_to.table_exists?(tab_to_copy)
+          table_creation_ddl = DbCopier.generate_create_table_ddl(@DB_from, tab_to_copy, tab_to_copy, (self.copy_columns[tab_to_copy] || []))
+          table_creation_ddl = ("@DB_to" + table_creation_ddl)
+          $stderr.puts "\n\ntable creation script: #{table_creation_ddl}\n\n"
+          eval table_creation_ddl
+        end
 
         #This is the intersection of columns specified via the +copy_columns+ argumnent in the +for_table+ method
         #and those that actually exist in the target table.
@@ -90,6 +86,8 @@ module DbCopier
       end
     end
 
+    protected :copy_tables
+
     def mock_copy_tables
       @tables_to_copy.each do |tab|
         puts "copying table #{tab}"
@@ -101,7 +99,6 @@ module DbCopier
       end
     end
 
-    protected :copy_tables
 
     def close_connections
       puts "closing connections"
@@ -117,6 +114,21 @@ module DbCopier
     Application.new &block
   end
 
+  def self.generate_create_table_ddl(db_conn, table_to_create_schema_from, new_table_name, only_copy_columns = [])
+    ret = String.new
+    db_conn.schema(table_to_create_schema_from.to_sym).each do |col|
+      col_name, col_type = col[0].to_sym, col[1][:type]
+      #Skip creating this column if it was not specified in the columns to copy for this table
+      next if only_copy_columns.count > 0 && !only_copy_columns.include?(col_name)
+      if col[1][:primary_key]
+        ret << "primary_key #{col_name.inspect}, #{col_type.to_sym.inspect}, :default => #{col[1][:default].inspect}, :null => #{col[1][:allow_null].inspect};\n"
+      else
+        ret << "#{col_type.to_s.capitalize} #{col_name.inspect}, :default => #{col[1][:default].inspect}, :null => #{col[1][:allow_null].inspect};\n"
+      end
+    end
+    ret = (".create_table #{new_table_name.to_sym.inspect} do \n" + ret)
+    ret << "end\n"
+  end
 
 end
 
