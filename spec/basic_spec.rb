@@ -1,14 +1,20 @@
 require File.dirname(__FILE__) + "/spec_helper.rb"
 
 describe DbCopier do
-  clean_up = lambda {|db_info, table_to_truncate| Sequel.connect(db_info)[table_to_truncate.to_sym].truncate } #Proc to truncate tables
+  clean_up = lambda {|db_info, table_to_truncate| db_conn = Sequel.connect(db_info); db_conn[table_to_truncate.to_sym].truncate; db_conn.disconnect; } #Proc to truncate tables
 
   mock_db = {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'db_copier_test'}
   fake_cred_db = {:adapter => 'mysql', :host => 'localhost', :user => 'rootsss', :password => '', :database => 'db_copier_test'}
   source_db = {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'dharma_development'}
   target_db = {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'admin_tools_development'}
 
-  it "should throw an argument error if the :from and :to hashes are not provided" do
+  before(:all) do
+    #create some connections
+    @source_db_conn, @fake_cred_db_conn, @mock_db_conn, @target_db_conn = Sequel.connect(source_db), Sequel.connect(fake_cred_db), 
+            Sequel.connect(mock_db), Sequel.connect(target_db)
+  end
+
+  it "should throw an argument error if the +:from+ and +:to+ arguments are not provided for the +copy+ method" do
     begin
       DbCopier.app do
         copy
@@ -34,7 +40,7 @@ describe DbCopier do
     end
   end
 
-  it "should throw an argument error if :from and :to are not hashes" do
+  it "should throw an argument error if the +:from+ and +:to+ arguments are NOT hashes" do
     begin
       DbCopier.app do
         copy :from => 'foo', :to => 'bar'
@@ -65,15 +71,19 @@ describe DbCopier do
   end
 
   it "should copy only select tables if they are provided as an #only method in the dsl" do
-    app = DbCopier.app do
-      copy :from => source_db, :to => mock_db, :mock_copy => true do
-        only 'custom_src_query_ratings', 'result_sets', 'review_votes'
+    only_tables_to_copy = ['users', 'source_ratings', 'user_source_query_histories'].sort
+
+    begin
+      app = DbCopier.app do
+        copy :from => source_db, :to => target_db do
+          only *only_tables_to_copy
+        end
       end
+      only_tables_to_copy.each { |tbl| @source_db_conn[tbl.to_sym].count.should == @target_db_conn[tbl.to_sym].count }
+    ensure
+      only_tables_to_copy.each { |tbl| @target_db_conn[tbl.to_sym].truncate }
     end
-    app.tables_to_copy.map {|tab| tab.to_s}.sort.should == ['custom_src_query_ratings', 'result_sets', 'review_votes']
   end
-
-
 
   it "should copy only select tables if they are provided as an #only method in the dsl - real test" do
     mock_copy = true
@@ -151,8 +161,7 @@ describe DbCopier do
 
   it "should copy only columns that are there in the target db" do
     begin
-      db_target = Sequel.connect mock_db
-      db_target.create_table :users do
+      @mock_db_conn.create_table :users do
         primary_key :id
         String :name
       end
@@ -161,10 +170,9 @@ describe DbCopier do
           only 'users'
         end
       end
-      db_src = Sequel.connect source_db
-      db_src[:users].count.should == db_target[:users].count
+      @source_db_conn[:users].count.should == @mock_db_conn[:users].count
     ensure
-      db_target.drop_table(:users) if db_target && db_target.table_exists?(:users)
+      @mock_db_conn.drop_table(:users) if @mock_db_conn.table_exists?(:users)
     end
   end
 
