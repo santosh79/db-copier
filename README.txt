@@ -17,6 +17,10 @@ end
 
 This would create tables and indexes in the target_db for you (if they do not exist) and copy over contents from the source.
 
+Installation
+------------
+sudo gem install 
+
 Options
 --------
 You can specify how many rows you would like to copy at a time via the rows_per_copy attribute.
