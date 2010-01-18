@@ -233,15 +233,12 @@ describe DbCopier do
   end
 
   it "should create tables in the target db if they do not exist" do
-    start = Time.now
     app = DbCopier.app do
       copy :from => source_db, :to => target_db do
       end
     end
-    $stderr.puts "Total time for copy: #{Time.now - start}"
     @target_db_conn.tables.map{|tbl| tbl.to_s}.sort.should == @source_db_conn.tables.map{|tbl| tbl.to_s}.sort
     @source_db_conn.tables.each do |tbl|
-      #$stderr.puts "examining table #{tbl}\tsource-count: #{@source_db_conn[tbl].count}\ttarget count: #{@target_db_conn[tbl].count}"
       @source_db_conn[tbl].count.should == @target_db_conn[tbl].count
     end
   end
@@ -294,8 +291,5 @@ describe DbCopier do
   end
 
   it "should contain useful log msgs"
-  it "should work in a threaded environment"
-  it "should handle blobs"
-  it "should figure out how disconnect really works"
 
 end

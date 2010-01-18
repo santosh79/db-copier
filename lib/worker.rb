@@ -1,14 +1,15 @@
 module DbCopier
   class Worker
     def initialize(options = {})
-      @src_db_conn, @target_db_conn, @table_name, @rows_per_copy, @copy_columns, @notify = options[:src_db_conn], options[:target_db_conn],
-              options[:table_name], (options[:rows_per_copy] || 1000), (options[:copy_columns] || []), options[:notify]
-      raise ArgumentError unless @src_db_conn && @target_db_conn && @table_name && @notify
+      @src_db_conn, @target_db_conn, @table_name, @rows_per_copy, @copy_columns = options[:src_db_conn], options[:target_db_conn],
+              options[:table_name], (options[:rows_per_copy] || 1000), (options[:copy_columns] || [])
+      raise ArgumentError unless @src_db_conn && @target_db_conn && @table_name
       @copy_columns ||= []
     end
 
     def copy_table
-      $stderr.puts "copying table: #{@table_name} from thread: #{Thread.current.object_id}"
+      start = Time.now
+      $stdout.print green, bold, "Thread: #{Thread.current.object_id} is copying table: #{@table_name}", reset, "\n"
       tab_to_copy = @table_name.to_sym
       num_rows = @src_db_conn[tab_to_copy].count
       i = 0
@@ -29,7 +30,6 @@ module DbCopier
                 columns_in_target_db
               end
 
-      #$stderr.puts "copy_columns[tab_to_copy]: #{@copy_columns.inspect}\tcolumns_in_target_db#{columns_in_target_db.inspect}\tcolumns_to_copy: #{columns_to_copy.inspect}"
       while i < num_rows
         rows_to_copy = @src_db_conn[tab_to_copy].select(*columns_to_copy).limit(@rows_per_copy, i).all
         #Special handling of datetime columns
@@ -44,11 +44,8 @@ module DbCopier
         next unless (columns_to_copy & index_info[:columns] == index_info[:columns])
         @target_db_conn.add_index(tab_to_copy, index_info[:columns])
       end
-      notify_caller
+      $stdout.print green,bold, "Thread: #{Thread.current.object_id} has COMPLETED copying table: #{@table_name} in #{Time.now - start} seconds", reset, "\n"
     end
 
-    def notify_caller
-      @notify.copy_complete(Thread.current)
-    end
   end
 end
