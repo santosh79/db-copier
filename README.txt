@@ -19,7 +19,7 @@ This would create tables and indexes in the target_db for you (if they do not ex
 
 Installation
 ------------
-sudo gem install 
+sudo gem install, ">= 0.0.1", :git => "git://github.com/santosh79/db-copier.git"
 
 Options
 --------
