@@ -11,7 +11,7 @@ DbCopier.app do
   copy :from => source_db, :to => target_db
 end
 
-This would create tables and indexes in the target_db for you (if they do not exist) and copy over contents from the source and best of all it %{=font-weight:bold;}works with any database that works with Sequel% (which is a pretty damn big set) -- so you can copy your stuff over from mysql over to postgres, no worries.
+This would create tables and indexes in the target_db for you (if they do not exist) and copy over contents from the source and best of all it <notextile>*works with any database that works with Sequel*</notextile> (which is a pretty damn big set) -- so you can copy your stuff over from mysql over to postgres, no worries.
 
 h3. Installation
 
