@@ -1,0 +1,66 @@
+h2. DbCopier
+DbCopier is a DSL around Sequel for quickly making back-ups/copies across various database systems with minimal fuss: 
+
+#my_copy_script.rb
+require 'rubygems'
+require 'db-copier'
+source_db => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'db_copier_test_src'} 
+target_db => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :password => '', :database => 'db_copier_test_target'}
+DbCopier.app do
+  copy :from => source_db, :to => target_db
+end
+
+This would create tables and indexes in the target_db for you (if they do not exist) and copy over contents from the source and best of all it %{=font-weight:bold;}works with any database that works with Sequel% (which is a pretty damn big set) -- so you can copy your stuff over from mysql over to postgres, no worries.
+h3. Installation
+sudo gem install, ">= 0.0.1", :git => "git://github.com/santosh79/db-copier.git"
+h3. Options
+You can specify how many rows you would like to copy at a time via the %{=font-weight:bold;}rows_per_copy% (default is 50) attribute.
+copy :from => source_db, :to => target_db, :rows_per_copy => 100 #Copies 100 rows at a time
+You can also specify the maximum number of open db connections you would like via the %{=font-weight:bold;}max_connections% attribute (default is 5).
+
+copy :from => source_db, :to => target_db, :max_connections => 5 #Maintains a maximum of 5 connections
+
+h3. More Granular Control
+If you would like to copy only certain tables, you can do that as well using the 'only' and 'except' methods.
+%{=text-decoration:underline;}Example:% Copy only the users table
+
+  copy :from => source_db, :to => target_db do
+    only => 'users'
+  end
+
+%{=text-decoration:underline;}Example:% Copy only the users and projects tables
+
+  copy :from => source_db, :to => target_db do
+    only => 'users', 'projects'
+  end
+
+%{=text-decoration:underline;}Example:% Copy everything but the users and projects tables
+
+  copy :from => source_db, :to => target_db do
+    except => 'users', 'projects'
+  end
+
+You can also choose to copy only over certain columns of a table using the for_table method.
+Example: Copy only the name and id fields of the users table
+
+  copy :from => source_db, :to => target_db do
+    for_table 'users', :copy_columns => ['name','id']
+  end
+
+You can mix-and-match to your heart's content.
+
+  copy :from => source_db, :to => target_db, :rows_per_copy => 1000, :max_connections => 10 do
+    except => 'departments', 'projects'
+    for_table 'users', :copy_columns => ['name','id']
+    for_table 'employees', :copy_columns => ['id','age','name']
+  end
+
+Finally, if you have already created the schema of the target_db db-copier only tries to copy columns that are present in the target_db's schema.
+h4. LICENSE
+(The MIT License)
+Copyright (c) 2009:
+"Santosh Kumar"
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
