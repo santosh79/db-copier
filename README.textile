@@ -28,19 +28,19 @@ copy :from => source_db, :to => target_db, :max_connections => 5 #Maintains a ma
 h3. More Granular Control
 
 If you would like to copy only certain tables, you can do that as well using the 'only' and 'except' methods.
-%{=text-decoration:underline;}Example:% Copy only the users table
+Example: Copy only the users table
 
   copy :from => source_db, :to => target_db do
     only => 'users'
   end
 
-%{=text-decoration:underline;}Example:% Copy only the users and projects tables
+Example: Copy only the users and projects tables
 
   copy :from => source_db, :to => target_db do
     only => 'users', 'projects'
   end
 
-%{=text-decoration:underline;}Example:% Copy everything but the users and projects tables
+Example: Copy everything but the users and projects tables
 
   copy :from => source_db, :to => target_db do
     except => 'users', 'projects'
