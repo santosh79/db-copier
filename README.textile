@@ -19,9 +19,9 @@ sudo gem install, ">= 0.0.1", :git => "git://github.com/santosh79/db-copier.git"
 
 h3. Options
 
-You can specify how many rows you would like to copy at a time via the %{=font-weight:bold;}rows_per_copy% (default is 50) attribute.
+You can specify how many rows you would like to copy at a time via the <notextile>*rows_per_copy*</notextile> (default is 50) attribute.
 copy :from => source_db, :to => target_db, :rows_per_copy => 100 #Copies 100 rows at a time
-You can also specify the maximum number of open db connections you would like via the %{=font-weight:bold;}max_connections% attribute (default is 5).
+You can also specify the maximum number of open db connections you would like via the <notextile>*max_connections*</notextile> attribute (default is 5).
 
 copy :from => source_db, :to => target_db, :max_connections => 5 #Maintains a maximum of 5 connections
 
