@@ -1,7 +1,7 @@
 DbCopier
 --------
 
-DbCopier is a DSL around Sequel for quickly making back-ups/copies of rdbms's with minimal fuss:
+DbCopier is a DSL around Sequel for quickly making back-ups/copies across various database systems with minimal fuss:
 
 --------------------------------------------------------------------------------------------------------------------------------
 #my_copy_script.rb
@@ -15,7 +15,9 @@ DbCopier.app do
 end
 --------------------------------------------------------------------------------------------------------------------------------
 
-This would create tables and indexes in the target_db for you (if they do not exist) and copy over contents from the source.
+This would create tables and indexes in the target_db for you (if they do not exist) and copy over contents from the source and
+best of all it works with any database that works with Sequel (which is a pretty damn big set) -- so you can copy your stuff over
+from mysql over to postgres, no worries.
 
 Installation
 ------------
@@ -23,7 +25,7 @@ sudo gem install, ">= 0.0.1", :git => "git://github.com/santosh79/db-copier.git"
 
 Options
 --------
-You can specify how many rows you would like to copy at a time via the rows_per_copy attribute.
+You can specify how many rows you would like to copy at a time via the rows_per_copy (default is 50) attribute.
 
 -------------------------------------------------------------------------------------------
 copy :from => source_db, :to => target_db, :rows_per_copy => 100 #Copies 100 rows at a time
@@ -48,10 +50,17 @@ Example: Copy only the users table
   end
 ---------------------------------------------------------------------
 
-Example: Copy everything but the users table
+Example: Copy only the users and projects tables
 ---------------------------------------------------------------------
   copy :from => source_db, :to => target_db do
-    except => 'users'
+    only => 'users', 'projects'
+  end
+---------------------------------------------------------------------
+
+Example: Copy everything but the users and projects tables
+---------------------------------------------------------------------
+  copy :from => source_db, :to => target_db do
+    except => 'users', 'projects'
   end
 ---------------------------------------------------------------------
 
@@ -64,6 +73,15 @@ Example: Copy only the name and id fields of the users table
     for_table 'users', :copy_columns => ['name','id']
   end
 ---------------------------------------------------------------------
+
+You can mix-and-match to your heart's content.
+----------------------------------------------------------------------------------------------
+  copy :from => source_db, :to => target_db, :rows_per_copy => 1000, :max_connections => 10 do
+    except => 'departments', 'projects'
+    for_table 'users', :copy_columns => ['name','id']
+    for_table 'employees', :copy_columns => ['id','age','name']
+  end
+----------------------------------------------------------------------------------------------
 
 Finally, if you have already created the schema of the target_db db-copier only tries to copy columns that are present in the target_db's schema.
 
