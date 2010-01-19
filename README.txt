@@ -3,7 +3,7 @@ DbCopier
 
 DbCopier is a DSL around Sequel for quickly making back-ups/copies across various database systems with minimal fuss:
 
---------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 #my_copy_script.rb
 require 'rubygems'
 require 'db-copier'
@@ -13,11 +13,9 @@ target_db => {:adapter => 'mysql', :host => 'localhost', :user => 'root', :passw
 DbCopier.app do
   copy :from => source_db, :to => target_db
 end
---------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 
-This would create tables and indexes in the target_db for you (if they do not exist) and copy over contents from the source and
-best of all it works with any database that works with Sequel (which is a pretty damn big set) -- so you can copy your stuff over
-from mysql over to postgres, no worries.
+This would create tables and indexes in the target_db for you (if they do not exist) and copy over contents from the source and best of all it works with any database that works with Sequel (which is a pretty damn big set) -- so you can copy your stuff over from mysql over to postgres, no worries.
 
 Installation
 ------------
