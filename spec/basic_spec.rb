@@ -5,68 +5,27 @@ describe DbCopier do
   target_db = source_db.merge(:database => 'db_copier_test_target')
   fake_cred_db = target_db.merge(:user => 'rootsss')
 
-  def get_tenor(val)
-    (val * 10 <= 3) ? "Luciano Pavarotti" : (val * 10 <= 6) ? "Placido Domingo" : "Jose Carreras"
-  end
-
-  def get_amigo(val)
-    (val * 10 <= 3) ? "Chevy Chase" : (val * 10 <= 6) ? "Steve Martin" : "Martin Short"
-  end
-
-  def get_three_tragic_shakespearean_characters(val)
-    (val * 10 <= 3) ? "King Lear" : (val * 10 <= 6) ? "Titus Andronicus" : "Hamlet"
+  def create_and_populate_table(conn, tbl_name, num_rows = 1000)
+    conn.create_table tbl_name do
+      primary_key :id, :integer, :null => false
+      String :nombre, :null => true
+      DateTime :created_at, :null => false, :default => DateTime.now
+    end
+    rows = []
+    num_rows.times {|i| rows << {:id => (i+1), :nombre => Faker::Name.name, :created_at => DateTime.now}}
+    conn[tbl_name].multi_insert rows
   end
 
   before(:all) do
     #create some connections
     @source_db_conn, @fake_cred_db_conn, @target_db_conn = Sequel.connect(source_db), Sequel.connect(fake_cred_db),
             Sequel.connect(target_db)
-    @source_db_conn.create_table :uno do
-      primary_key :id, :integer, :null => false
-      String :nombre, :null => true
-      DateTime :created_at, :null => false, :default => DateTime.now
-    end
 
-    a_thousand_tenors = []
-    1000.times { |i| a_thousand_tenors << {:id => (i+1), :nombre => get_tenor(rand), :created_at => DateTime.now} }
-    @source_db_conn[:uno].multi_insert(a_thousand_tenors)
-
-    @source_db_conn.create_table :dos do
-      primary_key :id, :integer, :null => false
-      String :nombre, :null => true
-      DateTime :created_at, :null => false, :default => DateTime.now
-    end
-
-    a_thousand_amigos = []
-    1000.times { |i| a_thousand_amigos<< {:id => (i+1), :nombre => get_amigo(rand), :created_at => DateTime.now} }
-    @source_db_conn[:dos].multi_insert(a_thousand_amigos)
-
-    @source_db_conn.create_table :tres do
-      primary_key :id, :integer, :null => false
-      String :nombre, :null => true
-      DateTime :created_at, :null => false, :default => DateTime.now
-    end
-    a_thousand_tragics = []
-    1000.times { |i| a_thousand_amigos<< {:id => (i+1), :nombre => get_three_tragic_shakespearean_characters(rand), :created_at => DateTime.now} }
-    @source_db_conn[:tres].multi_insert(a_thousand_tragics)
-
-    @source_db_conn.create_table :quatro do
-      primary_key :id, :integer, :null => false
-      String :nombre, :null => true
-      DateTime :created_at, :null => false, :default => DateTime.now
-    end
-    a_thousand_tragics = []
-    1000.times { |i| a_thousand_amigos<< {:id => (i+1), :nombre => get_three_tragic_shakespearean_characters(rand), :created_at => DateTime.now} }
-    @source_db_conn[:quatro].multi_insert(a_thousand_tragics)
-
-    @source_db_conn.create_table :quinto do
-      primary_key :id, :integer, :null => false
-      String :nombre, :null => true
-      DateTime :created_at, :null => false, :default => DateTime.now
-    end
-    a_thousand_tragics = []
-    1000.times { |i| a_thousand_amigos<< {:id => (i+1), :nombre => get_three_tragic_shakespearean_characters(rand), :created_at => DateTime.now} }
-    @source_db_conn[:quinto].multi_insert(a_thousand_tragics)
+    create_and_populate_table @source_db_conn, :uno
+    create_and_populate_table @source_db_conn, :dos
+    create_and_populate_table @source_db_conn, :tres
+    create_and_populate_table @source_db_conn, :quatro
+    create_and_populate_table @source_db_conn, :quinto
   end
 
   after(:each) do
