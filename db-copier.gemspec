@@ -18,7 +18,7 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   s.rubygems_version = %q{1.3.5}
   s.summary = %q{A DSL around Sequel to aid in copying or replicating databases.}
-  #s.add_dependency('sequel', '>=3.8.0')
-  #s.add_dependency('term-ansicolor','1.0.4')
+  s.add_dependency('sequel', '>=3.8.0')
+  s.add_dependency('term-ansicolor','1.0.4')
 
 end
